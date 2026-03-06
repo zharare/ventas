@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CONSITEC - Reporte de Ventas</title>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --blue-main: #0033A0;
+      --blue-secondary: #0055D4;
+      --white: #FFFFFF;
+      --blue-light: #E6F0FF;
+      --shadow: 0 10px 24px rgba(0, 51, 160, 0.18);
+      --transition: 220ms ease;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: linear-gradient(180deg, #f6f9ff 0%, var(--blue-light) 100%);
+      color: #0b1f4f;
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--blue-main);
+      color: var(--white);
+      text-align: center;
+      padding: 18px 16px;
+      letter-spacing: 0.5rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      font-size: clamp(1.2rem, 2vw, 1.8rem);
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 28px auto;
+      padding: 0 16px 24px;
+    }
+
+    .hidden { display: none !important; }
+
+    .folder-scene {
+      perspective: 1500px;
+      margin-bottom: 22px;
+    }
+
+    .big-folder {
+      position: relative;
+      background: linear-gradient(170deg, #6f99e5, var(--blue-secondary));
+      border-radius: 16px;
+      min-height: 380px;
+      padding: 72px 22px 24px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .folder-lid {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      top: 0;
+      height: 92px;
+      background: linear-gradient(165deg, var(--blue-main), #002772);
+      border-radius: 16px 16px 8px 8px;
+      transform-origin: bottom;
+      transform: rotateX(0deg) translateY(0);
+      transition: transform 500ms cubic-bezier(.2,.8,.2,1);
+      box-shadow: inset 0 -2px 0 rgba(255,255,255,.25);
+      z-index: 2;
+    }
+
+    .big-folder:hover .folder-lid {
+      transform: rotateX(68deg) translateY(-6px);
+    }
+
+    .folder-content {
+      background: rgba(255, 255, 255, 0.93);
+      border-radius: 12px;
+      min-height: 260px;
+      padding: 18px;
+      position: relative;
+      z-index: 1;
+      border: 1px solid rgba(0, 51, 160, 0.15);
+    }
+
+    .sales-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .sales-folder {
+      position: relative;
+      border-radius: 12px;
+      min-height: 96px;
+      padding: 10px 10px 12px;
+      color: #0b1f4f;
+      cursor: pointer;
+      box-shadow: 0 8px 16px rgba(3, 30, 94, 0.2);
+      transition: transform var(--transition), box-shadow var(--transition);
+      border: 1px solid rgba(0, 51, 160, 0.2);
+      overflow: hidden;
+    }
+
+    .sales-folder::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 10px;
+      width: 42%;
+      height: 18px;
+      border-radius: 8px 8px 0 0;
+      background: rgba(255,255,255,0.45);
+    }
+
+    .sales-folder:hover {
+      transform: translateY(-4px) scale(1.01);
+      box-shadow: 0 12px 20px rgba(3, 30, 94, 0.26);
+    }
+
+    .folder-top-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .icon-btn {
+      border: none;
+      background: rgba(255,255,255,0.72);
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #102a69;
+      transition: transform var(--transition), background var(--transition);
+    }
+
+    .icon-btn:hover {
+      transform: scale(1.07);
+      background: #fff;
+    }
+
+    .folder-name {
+      font-weight: 700;
+      margin-top: 20px;
+      text-align: center;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+      position: relative;
+      z-index: 1;
+    }
+
+    .actions-row {
+      text-align: center;
+      margin: 16px 0 10px;
+    }
+
+    .primary-btn {
+      border: none;
+      background: var(--blue-main);
+      color: var(--white);
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: background var(--transition), transform var(--transition);
+    }
+
+    .primary-btn:hover { background: var(--blue-secondary); transform: translateY(-2px); }
+
+    .secondary-btn {
+      border: 1px solid var(--blue-main);
+      background: white;
+      color: var(--blue-main);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .table-view {
+      background: #f7faff;
+      border: 1px solid rgba(0,51,160,0.22);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .table-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .left-tools, .right-tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .title-line {
+      font-weight: 700;
+      color: var(--blue-main);
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+
+    select, input[type="number"], input[type="text"] {
+      border: 1px solid rgba(0,51,160,.4);
+      border-radius: 8px;
+      padding: 8px;
+      min-width: 110px;
+    }
+
+    .table-wrap {
+      max-height: 58vh;
+      overflow: auto;
+      border: 1px solid rgba(0,51,160,.18);
+      border-radius: 10px;
+      background: white;
+    }
+
+    table {
+      width: 100%;
+      min-width: 1650px;
+      border-collapse: collapse;
+      font-family: Cambria, Georgia, serif;
+      text-transform: uppercase;
+      font-size: 0.86rem;
+    }
+
+    th, td {
+      border: 1px solid #b4c7f4;
+      padding: 7px 8px;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--blue-main);
+      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      white-space: nowrap;
+    }
+
+    td[contenteditable="true"]:focus {
+      outline: 2px solid var(--blue-secondary);
+      background: #edf4ff;
+    }
+
+    .row-action-btn {
+      border: none;
+      color: #b12626;
+      background: transparent;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 700;
+    }
+
+    .table-actions-bottom {
+      margin-top: 10px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 30;
+    }
+
+    .modal-card {
+      background: white;
+      border-radius: 12px;
+      width: min(420px, 100%);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .modal-card h2 {
+      margin: 0 0 10px;
+      color: var(--blue-main);
+      text-transform: uppercase;
+    }
+
+    .modal-actions {
+      margin-top: 12px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    @media (max-width: 920px) {
+      .sales-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .big-folder { min-height: 430px; }
+    }
+  </style>
+</head>
+<body>
+  <header>CONSITEC</header>
+  <main>
+    <section id="folderSection">
+      <div class="folder-scene">
+        <div class="big-folder">
+          <div class="folder-lid" aria-hidden="true"></div>
+          <div class="folder-content">
+            <div id="salesGrid" class="sales-grid"></div>
+          </div>
+        </div>
+      </div>
+      <div class="actions-row">
+        <button id="addSalesBtn" class="primary-btn">Agregar comercial</button>
+      </div>
+    </section>
+
+    <section id="tableSection" class="table-view hidden">
+      <div class="table-toolbar">
+        <div class="left-tools">
+          <button id="backBtn" class="secondary-btn" title="Volver"><i data-lucide="arrow-left"></i></button>
+          <div id="tableTitle" class="title-line">Vista de reporte</div>
+        </div>
+        <div class="right-tools">
+          <label>Filtrar por MES
+            <select id="monthFilter">
+              <option value="">Todos</option>
+              <option>Enero</option><option>Febrero</option><option>Marzo</option><option>Abril</option>
+              <option>Mayo</option><option>Junio</option><option>Julio</option><option>Agosto</option>
+              <option>Setiembre</option><option>Octubre</option><option>Noviembre</option><option>Diciembre</option>
+            </select>
+          </label>
+          <label>Filtrar por AÑO
+            <input id="yearFilter" type="number" min="1900" max="3000" placeholder="Año" />
+          </label>
+          <button id="exportBtn" class="primary-btn"><i data-lucide="file-spreadsheet"></i> Exportar</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr id="tableHeadRow"></tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="table-actions-bottom">
+        <button id="addRowBtn" class="primary-btn">Añadir fila</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="addModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h2>Nuevo comercial</h2>
+      <label for="salesName">Nombre del comercial</label>
+      <input id="salesName" type="text" placeholder="Ej. Carla" style="width: 100%; margin-top: 6px;" />
+      <div class="modal-actions">
+        <button id="cancelAdd" class="secondary-btn">Cancelar</button>
+        <button id="confirmAdd" class="primary-btn">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "consitec_sales_reports_v1";
+    const DEFAULT_COLOR = "#d1e2ff";
+    const DEFAULT_NAMES = ["Abigail", "Cristhian", "Ingrit", "Mayerly", "Valeria", "Fiorella"];
+    const HEADERS = [
+      "COD", "CLIENTE", "CONTACTO", "NÚMERO", "DISTRITO", "SERVICIO", "GRUPOS", "DÍAS", "DÍA", "MES",
+      "AÑO", "TOTAL S/. (NO Inc. IGV)", "FACTURADO", "N° FACTURA", "EMISIÓN CERTIFICADOS FISICO", "PAGO", "CRÉDITO"
+    ];
+
+    const state = {
+      salespeople: [],
+      selectedId: null,
+      filters: { month: "", year: "" }
+    };
+
+    const elements = {
+      folderSection: document.getElementById("folderSection"),
+      tableSection: document.getElementById("tableSection"),
+      salesGrid: document.getElementById("salesGrid"),
+      tableTitle: document.getElementById("tableTitle"),
+      tableHeadRow: document.getElementById("tableHeadRow"),
+      tableBody: document.getElementById("tableBody"),
+      addModal: document.getElementById("addModal"),
+      salesName: document.getElementById("salesName"),
+      monthFilter: document.getElementById("monthFilter"),
+      yearFilter: document.getElementById("yearFilter")
+    };
+
+    function makeId() {
+      return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    }
+
+    function buildEmptyRow() {
+      return HEADERS.reduce((row, key) => {
+        row[key] = "";
+        return row;
+      }, {});
+    }
+
+    function createInitialRows(count = 100) {
+      return Array.from({ length: count }, buildEmptyRow);
+    }
+
+    function defaultData() {
+      return DEFAULT_NAMES.map(name => ({
+        id: makeId(),
+        name,
+        color: DEFAULT_COLOR,
+        rows: createInitialRows(100)
+      }));
+    }
+
+    function loadState() {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (!stored) {
+        state.salespeople = defaultData();
+        saveState();
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed.salespeople)) {
+          state.salespeople = parsed.salespeople.map(person => ({
+            id: person.id || makeId(),
+            name: person.name || "SIN NOMBRE",
+            color: person.color || DEFAULT_COLOR,
+            rows: Array.isArray(person.rows) && person.rows.length
+              ? person.rows.map(row => HEADERS.reduce((acc, header) => {
+                acc[header] = row?.[header] ?? "";
+                return acc;
+              }, {}))
+              : createInitialRows(100)
+          }));
+        } else {
+          state.salespeople = defaultData();
+        }
+      } catch {
+        state.salespeople = defaultData();
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ salespeople: state.salespeople }));
+    }
+
+    function getSelectedPerson() {
+      return state.salespeople.find(p => p.id === state.selectedId);
+    }
+
+    function renderFolders() {
+      elements.salesGrid.innerHTML = "";
+
+      state.salespeople.forEach(person => {
+        const card = document.createElement("article");
+        card.className = "sales-folder";
+        card.style.background = person.color;
+        card.dataset.id = person.id;
+
+        const topActions = document.createElement("div");
+        topActions.className = "folder-top-actions";
+
+        const colorBtn = document.createElement("button");
+        colorBtn.className = "icon-btn";
+        colorBtn.title = "Cambiar color";
+        colorBtn.innerHTML = '<i data-lucide="palette"></i>';
+
+        const colorInput = document.createElement("input");
+        colorInput.type = "color";
+        colorInput.value = person.color;
+        colorInput.style.position = "absolute";
+        colorInput.style.opacity = "0";
+        colorInput.style.pointerEvents = "none";
+
+        colorBtn.addEventListener("click", ev => {
+          ev.stopPropagation();
+          colorInput.click();
+        });
+
+        colorInput.addEventListener("input", ev => {
+          person.color = ev.target.value;
+          saveState();
+          renderFolders();
+        });
+
+        const delBtn = document.createElement("button");
+        delBtn.className = "icon-btn";
+        delBtn.title = "Eliminar comercial";
+        delBtn.innerHTML = '<i data-lucide="x"></i>';
+        delBtn.addEventListener("click", ev => {
+          ev.stopPropagation();
+          if (!confirm(`¿Eliminar a ${person.name}?`)) return;
+          state.salespeople = state.salespeople.filter(p => p.id !== person.id);
+          if (!state.salespeople.length) {
+            state.selectedId = null;
+            showFolders();
+          }
+          saveState();
+          renderFolders();
+        });
+
+        const name = document.createElement("div");
+        name.className = "folder-name";
+        name.textContent = person.name;
+
+        topActions.append(colorBtn, delBtn, colorInput);
+        card.append(topActions, name);
+        card.addEventListener("click", () => openTable(person.id));
+        elements.salesGrid.appendChild(card);
+      });
+
+      lucide.createIcons();
+    }
+
+    function renderTableHeader() {
+      elements.tableHeadRow.innerHTML = "";
+      [...HEADERS, "ACCIÓN"].forEach(label => {
+        const th = document.createElement("th");
+        th.textContent = label;
+        elements.tableHeadRow.appendChild(th);
+      });
+    }
+
+    function rowMatchesFilters(row) {
+      const monthOk = !state.filters.month || String(row["MES"] || "").trim().toLowerCase() === state.filters.month.toLowerCase();
+      const yearOk = !state.filters.year || String(row["AÑO"] || "").trim() === state.filters.year;
+      return monthOk && yearOk;
+    }
+
+    function renderTableRows() {
+      const person = getSelectedPerson();
+      if (!person) return;
+
+      elements.tableBody.innerHTML = "";
+      person.rows.forEach((row, index) => {
+        if (!rowMatchesFilters(row)) return;
+
+        const tr = document.createElement("tr");
+
+        HEADERS.forEach(header => {
+          const td = document.createElement("td");
+          td.contentEditable = "true";
+          td.textContent = row[header] || "";
+          td.addEventListener("blur", () => {
+            row[header] = td.textContent;
+            saveState();
+          });
+          tr.appendChild(td);
+        });
+
+        const actionTd = document.createElement("td");
+        const removeBtn = document.createElement("button");
+        removeBtn.className = "row-action-btn";
+        removeBtn.innerHTML = '<i data-lucide="trash-2"></i> eliminar';
+        removeBtn.addEventListener("click", () => {
+          person.rows.splice(index, 1);
+          saveState();
+          renderTableRows();
+        });
+        actionTd.appendChild(removeBtn);
+        tr.appendChild(actionTd);
+
+        elements.tableBody.appendChild(tr);
+      });
+
+      lucide.createIcons();
+    }
+
+    function showFolders() {
+      elements.folderSection.classList.remove("hidden");
+      elements.tableSection.classList.add("hidden");
+      state.selectedId = null;
+      state.filters = { month: "", year: "" };
+      elements.monthFilter.value = "";
+      elements.yearFilter.value = "";
+    }
+
+    function openTable(personId) {
+      state.selectedId = personId;
+      const person = getSelectedPerson();
+      if (!person) return;
+      elements.tableTitle.textContent = `Vista de reporte - ${person.name}`;
+      elements.folderSection.classList.add("hidden");
+      elements.tableSection.classList.remove("hidden");
+      renderTableHeader();
+      renderTableRows();
+    }
+
+    function addSalesperson(name) {
+      state.salespeople.push({
+        id: makeId(),
+        name,
+        color: DEFAULT_COLOR,
+        rows: createInitialRows(100)
+      });
+      saveState();
+      renderFolders();
+    }
+
+    function exportCurrent() {
+      const person = getSelectedPerson();
+      if (!person) return;
+
+      const exportRows = person.rows
+        .filter(rowMatchesFilters)
+        .map(row => HEADERS.reduce((acc, header) => {
+          acc[header] = row[header] ?? "";
+          return acc;
+        }, {}));
+
+      const ws = XLSX.utils.json_to_sheet(exportRows.length ? exportRows : [buildEmptyRow()]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Reporte");
+      XLSX.writeFile(wb, `Reporte_Ventas_${person.name}.xlsx`);
+    }
+
+    document.getElementById("addSalesBtn").addEventListener("click", () => {
+      elements.addModal.classList.remove("hidden");
+      elements.salesName.value = "";
+      elements.salesName.focus();
+    });
+
+    document.getElementById("cancelAdd").addEventListener("click", () => {
+      elements.addModal.classList.add("hidden");
+    });
+
+    document.getElementById("confirmAdd").addEventListener("click", () => {
+      const name = elements.salesName.value.trim();
+      if (!name) {
+        alert("Ingrese un nombre válido.");
+        return;
+      }
+      addSalesperson(name);
+      elements.addModal.classList.add("hidden");
+    });
+
+    document.getElementById("backBtn").addEventListener("click", showFolders);
+
+    document.getElementById("addRowBtn").addEventListener("click", () => {
+      const person = getSelectedPerson();
+      if (!person) return;
+      person.rows.push(buildEmptyRow());
+      saveState();
+      renderTableRows();
+    });
+
+    document.getElementById("exportBtn").addEventListener("click", exportCurrent);
+
+    elements.monthFilter.addEventListener("change", (ev) => {
+      state.filters.month = ev.target.value;
+      renderTableRows();
+    });
+
+    elements.yearFilter.addEventListener("input", (ev) => {
+      state.filters.year = ev.target.value.trim();
+      renderTableRows();
+    });
+
+    loadState();
+    renderFolders();
+  </script>
+</body>
+</html>
